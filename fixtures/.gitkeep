@@ -1,0 +1,2 @@
+# This file keeps the fixtures/ directory in git.
+# Generated fixtures (fixtures/*.json) are git-ignored — regenerate with `npm run gen`.

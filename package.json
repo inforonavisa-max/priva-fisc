@@ -11,10 +11,12 @@
   "scripts": {
     "build": "tsc",
     "buildw": "tsc --watch",
-    "test": "echo \"No tests yet — circuit implementation pending spec/SPEC.md approval.\" && exit 0"
+    "gen": "tsc && node build/src/index.js",
+    "check": "tsc && node build/scripts/check.js",
+    "test": "tsc && node build/test/runner.js"
   },
   "dependencies": {
-    "o1js": "^2.15.0"
+    "o1js": "2.15.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",

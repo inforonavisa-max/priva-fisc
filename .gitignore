@@ -6,6 +6,12 @@ build/
 dist/
 *.tsbuildinfo
 
+# Generated synthetic fixtures (regenerate via `npm run gen`) — never committed
+fixtures/*.json
+
+# Synthetic RSA keypair (NON-PRODUCTION) — generated locally, never committed
+synthetic-keys/
+
 # Environment & secrets — NEVER commit
 .env
 .env.*
