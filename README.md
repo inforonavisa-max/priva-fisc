@@ -263,8 +263,22 @@ v0-A complete: synthetic generator **+ the ZkProgram** (`src/circuit.ts`, C1–C
 C5 limit) with authority attestation. `npm run gen`, `npm run check` (10/10), the
 **36 fast guards** (`npm test`), and the **ZkProgram suite** (`npm run
 test:circuit`: compile + 5 valid proofs verify + all 5 invalids reject + C1
-anti-replay) are all green. Phase-5 (real RSA-SHA256 + in-circuit SHA-256 `D` +
-real registry oracle + threshold audit) remains the R&D track (SPEC §8–§10).
+anti-replay) are all green.
+
+**Live on Mina Devnet.** The `FiscAnchor` zkApp (`src/anchor.ts`) verifies a
+FiscProof on-chain and writes only the commitment `C` to contract state. A valid
+synthetic proof was verified on Devnet and the on-chain `lastCommitment` matched
+`C` (it transitioned `0 → C`). Deploy with `npm run devnet:deploy` from a host
+with network access to the Devnet endpoint.
+- zkApp account: <https://minascan.io/devnet/account/B62qjhevpDt7BNjvt37JLqr9DVzA7Ewdoye48SbxaaY7vt9QK6X69Q6>
+- Deploy tx: <https://minascan.io/devnet/tx/5Jtb4kX3ANjnqdaNsJVSShTb3dtiSe3KivscdaUK6Q5gU28mrpof?type=zk-tx>
+- On-chain proof-verification (publish) tx: <https://minascan.io/devnet/tx/5JuG4rMNvzv7xWkodXdd4Q76wbTRWuegzYhkfdJBKW25LtFA3Bw9?type=zk-tx>
+
+This is the v0-A architecture running end-to-end on **synthetic data**, with a
+stand-in (ZK-native) authority signature and an opaque public `D` — **not** a proof
+that any real receipt was fiscalized. Phase-5 (real RSA-SHA256 + MD5 + XML-DSig
+verified in-circuit, in-circuit SHA-256 `D`, real registry oracle + threshold
+audit) remains the R&D track (SPEC §8–§10).
 
 ---
 
