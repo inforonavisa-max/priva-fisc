@@ -8,10 +8,12 @@ proof-of-concept** on the Mina protocol using **o1js** (TypeScript).
 
 📄 **Architecture write-up / whitepaper:** [WHITEPAPER.md](WHITEPAPER.md)
 
-> **This task = repo skeleton + synthetic EFI generator only.** The ZK circuit /
-> ZkProgram is the **next** task and is intentionally **absent**. The relation it
-> will prove is specified, language-agnostically, in [`spec/SPEC.md`](spec/SPEC.md)
-> — the single source of truth.
+> **Status:** the v0-A ZkProgram (constraints C1–C4) is implemented and **live on
+> Mina Devnet** — see [Status](#status) for the explorer links. The proven relation
+> is specified, language-agnostically, in [`spec/SPEC.md`](spec/SPEC.md) (the single
+> source of truth). Read the **honest-scope** note below for exactly what this
+> prototype does and does not prove (synthetic data; stand-in authority signature;
+> real in-circuit signature/digest verification is Phase-5).
 
 ---
 
