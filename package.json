@@ -4,7 +4,7 @@
   "description": "PRIVA-FISC — zero-knowledge selective-disclosure proof of fiscalization. v0 PoC on Mina (o1js, TypeScript). Synthetic data only; no real PII/keys.",
   "type": "module",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=18.14.0"
   },

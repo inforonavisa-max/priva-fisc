@@ -270,7 +270,4 @@ real registry oracle + threshold audit) remains the R&D track (SPEC §8–§10).
 
 ## License
 
-**LICENSE: TBD — deferred pending D2 decision. Do not add an OSS license without
-sign-off.** (Open-core vs. patent optionality is unresolved; an OSS license now
-could foreclose the patent path.) Until then this code is **private / all rights
-reserved** — do not redistribute. `package.json` is marked `UNLICENSED`.
+License: **Apache-2.0** (open-core). See [LICENSE](LICENSE).
