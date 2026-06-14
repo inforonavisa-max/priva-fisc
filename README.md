@@ -6,6 +6,8 @@ tax-ID registered — **without revealing the private commercial data behind it*
 (buyer identity, item-level detail, margins). This repository is the **v0-A
 proof-of-concept** on the Mina protocol using **o1js** (TypeScript).
 
+📄 **Architecture write-up / whitepaper:** [WHITEPAPER.md](WHITEPAPER.md)
+
 > **This task = repo skeleton + synthetic EFI generator only.** The ZK circuit /
 > ZkProgram is the **next** task and is intentionally **absent**. The relation it
 > will prove is specified, language-agnostically, in [`spec/SPEC.md`](spec/SPEC.md)
