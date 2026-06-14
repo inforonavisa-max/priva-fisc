@@ -16,7 +16,8 @@
     "test": "tsc && node build/test/runner.js",
     "test:circuit": "tsc && node build/test/t-circuit.test.js",
     "anchor:test": "tsc && node build/scripts/anchor-local-test.js",
-    "devnet:keys": "tsc && node build/scripts/devnet-keygen.js"
+    "devnet:keys": "tsc && node build/scripts/devnet-keygen.js",
+    "devnet:deploy": "tsc && node build/scripts/devnet-deploy.js"
   },
   "dependencies": {
     "o1js": "2.15.0"
