@@ -18,6 +18,15 @@
  * `itemsCommit` that the §4.1 field-tuple uses (full per-item byte expansion is a
  * Phase-5 realism refinement; v0-A binds items via itemsCommit, consistent with T).
  *
+ * ⚠️  v0-A SYNTHETIC CONVENTION — NOT the real canonical form. The real
+ *     canonical(P) is EFI XML under Exclusive-C14N (SPEC §8/§13), a Phase-5
+ *     target the spec itself leaves unpinned ("reference libs differ", §13).
+ *     This length-prefixed field-tuple byte form is the single internal v0-A
+ *     convention §13 sanctions; D stays an OPAQUE public input.
+ *     TODO(confirm): map to the official Tehnička uputstva canonical EFI form
+ *     at Phase-5 — incl. amount formatting (here: integer cents; real XML likely
+ *     decimal euros) and full line-item expansion (here: itemsCommit).
+ *
  * ── BYTE FORMAT (canonical, injective) ──────────────────────────────────────
  * For each field, in `T_FIELD_ORDER` (= SPEC §4.1) order, append:
  *     4-byte big-endian length  ‖  field bytes
