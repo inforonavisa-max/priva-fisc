@@ -13,7 +13,8 @@
     "buildw": "tsc --watch",
     "gen": "tsc && node build/src/index.js",
     "check": "tsc && node build/scripts/check.js",
-    "test": "tsc && node build/test/runner.js"
+    "test": "tsc && node build/test/runner.js",
+    "test:circuit": "tsc && node build/test/t-circuit.test.js"
   },
   "dependencies": {
     "o1js": "2.15.0"

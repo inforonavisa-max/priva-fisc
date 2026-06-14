@@ -69,7 +69,7 @@ export const BYTES_PER_FIELD = 31;
 //
 // TODO(confirm): final DS_* values are pinned in build per SPEC §11.7. These
 // small distinct integers are the v0-A choice — concrete, documented, and
-// sufficient for domain separation between the three Poseidon uses below.
+// sufficient for domain separation between the four Poseidon uses below.
 //
 // NOTE: there is no DS tag for the receipt digest D — D = SHA-256(canonical(P))
 // is a BYTE hash (SPEC §7-C5/§13), not a Poseidon hash; see src/canonical.ts.
@@ -80,6 +80,8 @@ export const DS = {
   LEAF: Field(3),
   /** itemsCommit = Poseidon([DS.ITEMS, …]) — SPEC §7-C2 H(line_items)        */
   ITEMS: Field(4),
+  /** M = Poseidon([DS.ATTEST, …]) — SPEC §7-C1 attestation binding message   */
+  ATTEST: Field(5),
 } as const;
 
 // ----------------------------------------------------------------------------

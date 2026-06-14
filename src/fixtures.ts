@@ -2,13 +2,13 @@
  * PRIVA-FISC v0-A — Fixture assembly (SPEC §6 interface envelope)
  * ============================================================================
  * Ties the pieces together into the fixture envelope consumed by scripts/check.ts
- * (now) and the ZkProgram tests (next task): publicInputs {C,D,sellersRoot,
- * PK_ref,rateParams} · witness {…T, marginCents, itemsCommit, salt, merklePath,
- * merkleIndexBits} · expected {valid} · _invalidReason? · ikof · efi.
+ * and the ZkProgram (src/circuit.ts): publicInputs {C,D,sellersRoot,PK_A,
+ * rateParams} · witness {…T, marginCents, itemsCommit, salt, sigReceipt, M,
+ * merklePath, merkleIndexBits} · expected {valid} · _invalidReason? · ikof · efi.
  *
- * `expected.valid` reflects the GENERATOR-CHECKABLE relation subset (SPEC §7
- * C2/C3/C4 + structural well-formedness). C1 (the authority ZK-signature) is
- * NOT generated here — it is the next (circuit) task; see PublicInputs.PK_ref.
+ * `expected.valid` now reflects the FULL relation (SPEC §7 C1+C2+C3+C4): the
+ * authority attestation (C1) is generated here via the synthetic mock authority
+ * (src/authority.ts).
  * ----------------------------------------------------------------------------
  */
 
@@ -26,6 +26,12 @@ import { amountToJSON, fieldToJSON } from './encoding.js';
 import { centsToDecimalString } from './ikof.js';
 import { commitC, itemsCommit, sellerLeaf } from './commitments.js';
 import { digestD } from './canonical.js';
+import {
+  computeAttestMessage,
+  deriveAuthorityKeypair,
+  signReceipt,
+  type AuthorityKeypair,
+} from './authority.js';
 import {
   buildSellersTree,
   inclusionPath,
@@ -46,16 +52,6 @@ import {
   type GeneratorConfig,
 } from './synthetic.js';
 import { DeterministicPrng } from './prng.js';
-
-const PK_REF_PLACEHOLDER = {
-  scheme: 'zk-native-signature (deferred to circuit task)' as const,
-  note:
-    'Authority ZK-signature (Schnorr/EdDSA-native, SPEC §3/§7-C1) and the ' +
-    'σ_rcpt/σ_reg attestations are produced by the NEXT (circuit) task, not ' +
-    'this generator. The seller RSA key for the IKOF chain is separate ' +
-    '(see ikof.sellerRsaPublicKeyPem).',
-  value: null,
-};
 
 /** Lightweight synthetic EFI XML (NOT C14N, NOT signed — shape/realism only). */
 function renderSyntheticXml(rec: EfiRecord, ikof: string, jikr: string): string {
@@ -94,6 +90,8 @@ function recordToWitness(
   rec: EfiRecord,
   itemsCommitField: Field,
   salt: Field,
+  sigReceiptB58: string,
+  M: Field,
   path: InclusionPath,
 ): FixtureWitness {
   return {
@@ -116,6 +114,8 @@ function recordToWitness(
     marginCents: amountToJSON(rec.marginCents),
     itemsCommit: fieldToJSON(itemsCommitField),
     salt: fieldToJSON(salt),
+    sigReceipt: sigReceiptB58,
+    M: fieldToJSON(M),
     merklePath: path.merklePath,
     merkleIndexBits: path.merkleIndexBits,
     merkleIndex: path.merkleIndex,
@@ -129,10 +129,13 @@ interface AssembleParams {
   path: InclusionPath;
   tree: SellersTree;
   keypair: SyntheticRsaKeypair;
+  authority: AuthorityKeypair;
   expectedValid: boolean;
   invalidReason?: InvalidReason;
   /** COMMITMENT_MISMATCH: publish a C ≠ C(witness). */
   corruptPublishedCommitment: boolean;
+  /** BAD_SIGNATURE: σ_rcpt that does NOT verify against (PK_A, M). */
+  corruptSignature: boolean;
 }
 
 function assembleFixture(p: AssembleParams): Fixture {
@@ -140,6 +143,21 @@ function assembleFixture(p: AssembleParams): Fixture {
   const realC = commitC(p.rec, itemsCommitField, p.salt);
   const publishedC = p.corruptPublishedCommitment ? realC.add(Field(1)) : realC;
   const D = digestD(p.rec, itemsCommitField); // { hi, lo, hex }
+
+  // C1 attestation (SPEC §7-C1): authority signs M over the PUBLISHED (D,C,R_reg,
+  // datetime,invoice_no). For COMMITMENT_MISMATCH the published C is the corrupted
+  // one, so C1 still passes (authority signed THIS published C) and only C2 fails.
+  const M = computeAttestMessage(
+    Field(BigInt(D.hi)),
+    Field(BigInt(D.lo)),
+    publishedC,
+    p.tree.root,
+    p.rec.datetime,
+    p.rec.invoiceNo,
+  );
+  // BAD_SIGNATURE: sign a tampered M' (M+1) with the real authority key, so the
+  // stored M is honest but σ does not verify against (PK_A, M) → only C1 fails.
+  const sig = signReceipt(p.authority.secretKey, p.corruptSignature ? M.add(Field(1)) : M);
 
   const ikof = buildIkofChain(p.rec, p.keypair.privateKey, p.keypair.publicPem);
   const xml = renderSyntheticXml(p.rec, ikof.ikof, ikof.jikr);
@@ -152,10 +170,17 @@ function assembleFixture(p: AssembleParams): Fixture {
       C: fieldToJSON(publishedC),
       D,
       sellersRoot: fieldToJSON(p.tree.root),
-      PK_ref: PK_REF_PLACEHOLDER,
+      PK_A: p.authority.publicKey.toBase58(),
       rateParams: RATE_PARAMS,
     },
-    witness: recordToWitness(p.rec, itemsCommitField, p.salt, p.path),
+    witness: recordToWitness(
+      p.rec,
+      itemsCommitField,
+      p.salt,
+      sig.toBase58(),
+      M,
+      p.path,
+    ),
     expected: { valid: p.expectedValid },
     ikof,
     efi: {
@@ -212,6 +237,7 @@ export function buildDataset(
 ): Dataset {
   const prng = new DeterministicPrng(config.seed);
   const keypair = loadOrCreateSellerKeypair();
+  const authority = deriveAuthorityKeypair(config.seed); // synthetic mock tax authority
   const registeredTins = buildRegisteredTins(config.registrySize);
   const tree = buildSellersTree(registeredTins);
 
@@ -239,8 +265,10 @@ export function buildDataset(
         path,
         tree,
         keypair,
+        authority,
         expectedValid: true,
         corruptPublishedCommitment: false,
+        corruptSignature: false,
       }),
     );
   }
@@ -280,9 +308,11 @@ export function buildDataset(
           path,
           tree,
           keypair,
+          authority,
           expectedValid: false,
           invalidReason: reason,
           corruptPublishedCommitment: mutation.corruptPublishedCommitment,
+          corruptSignature: mutation.corruptSignature,
         }),
       );
     }

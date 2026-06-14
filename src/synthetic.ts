@@ -124,6 +124,7 @@ export const DEFAULT_CONFIG: GeneratorConfig = {
     SELLER_NOT_REGISTERED: 1,
     OUT_OF_RANGE: 1,
     COMMITMENT_MISMATCH: 1,
+    BAD_SIGNATURE: 1,
   },
   registrySize: 16,
 };
@@ -141,6 +142,8 @@ export interface InvalidMutation {
   sellerUnregistered: boolean;
   /** For COMMITMENT_MISMATCH: publish a C that differs from C(witness). */
   corruptPublishedCommitment: boolean;
+  /** For BAD_SIGNATURE: σ_rcpt does not verify against (PK_A, M) (C1 fails). */
+  corruptSignature: boolean;
 }
 
 export function makeInvalidMutation(
@@ -166,6 +169,7 @@ export function makeInvalidMutation(
         reason,
         sellerUnregistered: false,
         corruptPublishedCommitment: false,
+        corruptSignature: false,
       };
     }
     case 'SELLER_NOT_REGISTERED': {
@@ -176,6 +180,7 @@ export function makeInvalidMutation(
         reason,
         sellerUnregistered: true,
         corruptPublishedCommitment: false,
+        corruptSignature: false,
       };
     }
     case 'OUT_OF_RANGE': {
@@ -192,6 +197,7 @@ export function makeInvalidMutation(
         reason,
         sellerUnregistered: false,
         corruptPublishedCommitment: false,
+        corruptSignature: false,
       };
     }
     case 'COMMITMENT_MISMATCH': {
@@ -201,6 +207,18 @@ export function makeInvalidMutation(
         reason,
         sellerUnregistered: false,
         corruptPublishedCommitment: true,
+        corruptSignature: false,
+      };
+    }
+    case 'BAD_SIGNATURE': {
+      // Record + commitment + Merkle + VAT all valid; the assembler will produce a
+      // σ_rcpt that does NOT verify against (PK_A, M) → only C1 fails.
+      return {
+        record: valid,
+        reason,
+        sellerUnregistered: false,
+        corruptPublishedCommitment: false,
+        corruptSignature: true,
       };
     }
     default: {

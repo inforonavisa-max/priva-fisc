@@ -56,26 +56,73 @@ export function itemsCommit(items: LineItem[]): Field {
   return Poseidon.hash([DS.ITEMS, Field(BigInt(items.length)), ...flat]);
 }
 
+// ─── Provable Field-only cores (in-circuit-safe) ────────────────────────────
+// These take ALREADY-ENCODED Fields and do nothing but Poseidon — so they run
+// unchanged inside a ZkProgram (src/circuit.ts) AND back the generator wrappers
+// below, byte-for-byte. They keep this module o1js-pure (T-PURITY). DO NOT
+// REORDER the hash inputs (circuit-shared; pinned by T-ORDER).
+
+/**
+ * Provable core of the registry leaf (SPEC §7-C4):
+ *   leaf = Poseidon([DS.LEAF, encTin]).
+ */
+export function leafFromEncTin(encTin: Field): Field {
+  return Poseidon.hash([DS.LEAF, encTin]);
+}
+
+/**
+ * Provable core of the commitment C (SPEC §7-C2). Field order (DO NOT REORDER):
+ *   [ DS.COMMIT, seller_tin, buyer_id, H(line_items), margin,
+ *     vat_base, vat_amount, vat_rate, total, salt ]
+ * All arguments are pre-encoded Fields (encodeStringToField for strings,
+ * encodeAmount for amounts, encodeRateBp for the rate, itemsCommit, salt).
+ */
+export function commitCFields(
+  encSellerTin: Field,
+  encBuyerId: Field,
+  itemsCommitField: Field,
+  margin: Field,
+  vatBase: Field,
+  vatAmount: Field,
+  rateBp: Field,
+  total: Field,
+  salt: Field,
+): Field {
+  return Poseidon.hash([
+    DS.COMMIT,
+    encSellerTin,
+    encBuyerId,
+    itemsCommitField,
+    margin,
+    vatBase,
+    vatAmount,
+    rateBp,
+    total,
+    salt,
+  ]);
+}
+
+// ─── Generator wrappers (JS string/bigint → encoded Fields → cores) ─────────
+// Behaviour is BYTE-IDENTICAL to the previous direct implementations; they now
+// delegate to the Provable cores so the circuit and generator share one hash.
+
 /**
  * Registry leaf (SPEC §7-C4): leaf = Poseidon([DS.LEAF, encodeStringToField(tin)]).
  * `seller_tin` stays private; only this leaf (and the root) are ever exposed.
  */
 export function sellerLeaf(sellerTin: string): Field {
-  return Poseidon.hash([DS.LEAF, encodeStringToField(sellerTin)]);
+  return leafFromEncTin(encodeStringToField(sellerTin));
 }
 
 /**
- * Commitment C = SPEC §7-C2 (full). Field order (DO NOT REORDER — circuit-shared):
- *   [ DS.COMMIT, seller_tin, buyer_id, H(line_items), margin,
- *     vat_base, vat_amount, vat_rate, total, salt ]
+ * Commitment C = SPEC §7-C2 (full), generator-side wrapper over commitCFields.
  */
 export function commitC(
   rec: EfiRecord,
   itemsCommitField: Field,
   salt: Field,
 ): Field {
-  return Poseidon.hash([
-    DS.COMMIT,
+  return commitCFields(
     encodeStringToField(rec.sellerTin),
     encodeStringToField(rec.buyerId),
     itemsCommitField,
@@ -85,5 +132,5 @@ export function commitC(
     encodeRateBp(rec.vatRateBp),
     encodeAmount(rec.totalCents),
     salt,
-  ]);
+  );
 }

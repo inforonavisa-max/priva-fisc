@@ -28,15 +28,15 @@ group('T-LEAK');
 
 const fixtures = generateFixtures();
 
-const PUBLIC_KEYS = ['C', 'D', 'sellersRoot', 'PK_ref', 'rateParams'].sort();
+const PUBLIC_KEYS = ['C', 'D', 'sellersRoot', 'PK_A', 'rateParams'].sort();
 
 // Private field names (witness keys + spec snake-case synonyms).
 const PRIVATE_NAMES = new Set<string>([
   // witness object keys (camelCase)
   'sellerTin', 'datetime', 'invoiceNo', 'businessUnit', 'enuTcr', 'softwareCode',
   'totalCents', 'vatBaseCents', 'vatRateBp', 'vatAmountCents', 'buyerId',
-  'lineItems', 'marginCents', 'itemsCommit', 'salt', 'merklePath',
-  'merkleIndexBits', 'merkleIndex',
+  'lineItems', 'marginCents', 'itemsCommit', 'salt', 'sigReceipt', 'M',
+  'merklePath', 'merkleIndexBits', 'merkleIndex',
   // SPEC §4.1 snake-case names
   'seller_tin', 'invoice_no', 'business_unit', 'enu_tcr', 'software_code',
   'vat_base', 'vat_rate', 'vat_rate_bp', 'vat_amount', 'buyer_id', 'line_items',
@@ -59,7 +59,7 @@ function distinctiveWitnessValues(fx: Fixture): string[] {
   const w = fx.witness;
   const vals: string[] = [
     w.sellerTin, w.datetime, w.invoiceNo, w.businessUnit, w.enuTcr,
-    w.softwareCode, w.buyerId, w.salt, w.itemsCommit,
+    w.softwareCode, w.buyerId, w.salt, w.itemsCommit, w.sigReceipt, w.M,
     ...w.lineItems.map((it) => it.name),
     ...w.merklePath.map((p) => p.sibling),
   ];
@@ -84,14 +84,12 @@ test('every fixture: C/sellersRoot pure decimal; D = {hi,lo decimal, hex 64-hex}
   }
 });
 
-test('every fixture: rateParams == fixed public params; PK_ref is null placeholder', () => {
+test('every fixture: rateParams == fixed public params; PK_A is a base58 pubkey', () => {
   for (const fx of fixtures) {
     eq(fx.publicInputs.rateParams, RATE_PARAMS, `${fx.id}: rateParams drift`);
-    strictEqOrThrow(fx.publicInputs.PK_ref.value, null, `${fx.id}: PK_ref.value not null`);
-    eq(
-      Object.keys(fx.publicInputs.PK_ref).sort(),
-      ['note', 'scheme', 'value'],
-      `${fx.id}: PK_ref keys`,
+    ok(
+      typeof fx.publicInputs.PK_A === 'string' && /^B62[1-9A-HJ-NP-Za-km-z]+$/.test(fx.publicInputs.PK_A),
+      `${fx.id}: PK_A not a base58 Mina public key`,
     );
   }
 });
@@ -121,7 +119,3 @@ test('VALUE check: no distinctive witness value leaks into the public group', ()
     }
   }
 });
-
-function strictEqOrThrow<T>(a: T, b: T, msg: string): void {
-  if (a !== b) throw new Error(`${msg} (got ${String(a)})`);
-}

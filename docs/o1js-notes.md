@@ -78,9 +78,8 @@ Probe (height 4, 8 leaves), LSB-first `isLeft` arrays vs `calculateIndex()`:
 
 ## SPEC-vs-task reconciliations baked into `src/`
 
-Two places where the build resolved an ambiguity; the **SPEC is the single source
-of truth** and the choices below were made so the generator matches the circuit
-the next task will build:
+Places where the build resolved an ambiguity; the **SPEC is the single source of
+truth** and the choices below were made so the generator matches the circuit:
 
 1. **Commitment `C` scope.** The task prompt's shorthand was
    `C = Poseidon(buyerId, itemsCommit, margin, salt)`. We instead implement the
@@ -91,14 +90,41 @@ the next task will build:
    form would guarantee the generator↔circuit mismatch the prompt warns against.
    The prompt's 4 fields are a strict subset of C2. See `src/commitments.ts`.
 
-2. **Receipt digest `D`.** v0-A `D = Poseidon([DS_DIGEST, ...T])` over the
-   canonical field-tuple — **not** `SHA-256(canonical XML)`. SPEC §13's
-   `SHA-256(canonicalize(P))` describes the real-world / IKOF-chain digest; v0-A's
-   in-circuit canonical form is the Poseidon field-tuple digest (SPEC §3, §9), and
-   the SHA-256↔fields binding is the Phase-5/C5 deferral. The synthetic IKOF chain
-   (RSA-SHA256 + MD5) is computed off-circuit over the 7-field pipe-join.
+2. **Receipt digest `D` = `SHA-256(canonical(P))`** (SPEC §7-C5/§13), carried as
+   two 128-bit Field limbs `{hi, lo}` + hex. (An earlier `D = Poseidon(T)`
+   construction was a stale prompt artifact, corrected in commit `c8b5649` to
+   match the spec.) `D` is an **opaque public input** in v0-A; the circuit does
+   NOT recompute it (the in-circuit SHA-256 is the Phase-5/§9 v0-B step). The byte
+   `canonicalize(P)` lives in the generator-only `src/canonical.ts`. The synthetic
+   IKOF chain (RSA-SHA256 + MD5) is separate, over the 7-field pipe-join (§13).
+
+3. **`C` realization (circuit, §6 / D2).** §6 labels `C` the published **output**;
+   the v0-A ZkProgram realizes it as a **constrained public input** (asserts
+   `commitCFields(witness)==C`) so the COMMITMENT_MISMATCH case is exercisable.
+   Verifier-equivalent but an architectural role change; Phase-5 revisits it.
 
 ## Domain-separation tags (v0-A choice)
 
-`DS = { DIGEST:1, COMMIT:2, LEAF:3, ITEMS:4 }` (distinct Field constants), per
-SPEC §11.7. `TODO(confirm)`: final DS values pinned in build.
+`DS = { COMMIT:2, LEAF:3, ITEMS:4, ATTEST:5 }` (distinct Field constants), per
+SPEC §11.7. There is no DS tag for `D` (it is a byte SHA-256, not Poseidon).
+`TODO(confirm)`: final DS values pinned in build.
+
+## Circuit-phase APIs (verified against installed o1js@2.15.0)
+
+Probed before use (the `node --eval` path mangles o1js stack traces — run probes
+from a file, e.g. a gitignored `build/*.mjs`):
+
+| API | Verified behaviour |
+|---|---|
+| `Signature.create(sk, Field[])` / `sig.verify(pk, Field[]) → Bool` | in-circuit `sig.verify(PK,[M]).assertTrue()`; **deterministic** for same `(sk, msg)` |
+| `PrivateKey.fromBigInt(scalar)` | accepts a 248-bit seed-derived scalar → deterministic authority key |
+| `Signature.toBase58/fromBase58`, `PublicKey.toBase58/fromBase58` | round-trip ✓ (fixture serialization) |
+| `ZkProgram({ name, publicInput: Struct, methods:{ m:{ privateInputs, async method(pub,…) } } })` | omit `publicOutput` ⇒ void; `await P.compile()` (~6 s); `await P.m(pub,…) → {proof, auxiliaryOutput}`; `await P.verify(proof) → boolean` |
+| `class P extends ZkProgram.Proof(prog) {}` | proof class factory |
+| `Field.assertLessThanOrEqual(Field)` / `assertLessThan` | canonical-integer comparison in `[0,p)`; used for the MAXBITS=52 range bound + remainder `r < denom` |
+| `UInt64.from(...)` | **does NOT type-accept `Field`** (only string/number/bigint/UInt64/UInt32); use `Field.assertLessThanOrEqual` or `UInt64.Unsafe.fromField` instead |
+| `Gadgets.rangeCheckN(length, x)` | exists; `length` must be a **multiple of 16** (so not usable for a bare 52-bit check) |
+| `MerkleWitness(h).calculateRoot(leaf)` | runs in-circuit (C4) |
+
+Proving times (this machine): compile ~6 s; each valid prove+verify ~4.4 s;
+invalid fixtures reject at witness-generation (~0 s, before proving).

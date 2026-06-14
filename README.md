@@ -67,12 +67,16 @@ Administration keys, ever. Enforced concretely:
 |---|---|
 | `npm run gen` | `tsc` + generate synthetic fixtures into `fixtures/` |
 | `npm run check` | `tsc` + run the generator **self-check** (`scripts/check.ts`) |
+| `npm test` | `tsc` + the **36 fast regression guards** (`test/runner.ts`) |
+| `npm run test:circuit` | `tsc` + the **ZkProgram suite** (compile + prove + reject; ~40 s) |
 | `npm run build` | `tsc` only |
 
 ```
 npm install
-npm run gen        # writes fixtures/valid-*.json, fixtures/invalid-*.json, manifest.json
-npm run check      # recomputes every relation from the witness; exits non-zero on any failure
+npm run gen          # writes fixtures/valid-*.json, fixtures/invalid-*.json, manifest.json
+npm run check        # recomputes every relation (incl. C1 σ) from the witness
+npm test             # 36 fast anti-drift guards (T-ORDER/T-LEAK/T-DET/T-CANON/T-RANGE/T-D5/T-PURITY)
+npm run test:circuit # compiles the ZkProgram, proves the 5 valid fixtures, asserts all 5 invalids reject
 
 # options:
 npm run gen -- --valid=10 --invalid-per-reason=2 --registry=32 --seed=my-seed
@@ -94,18 +98,66 @@ src/
   encoding.ts         CANONICAL field→Field encoding — SINGLE SOURCE OF TRUTH (circuit-shared)
   schema.ts           EFI record + fixture types (mirrors SPEC §4.1) + VAT rule (SSOT)
   prng.ts             deterministic seeded PRNG (reproducible fixtures)
-  rsa.ts              synthetic RSA-2048 keypair, RSA-SHA256 sign/verify, MD5
+  canonical.ts        GENERATOR-ONLY byte canonicalize(P) + D = SHA-256 (two limbs)
+  rsa.ts              synthetic RSA-2048 keypair, RSA-SHA256 sign/verify, MD5 (IKOF)
   ikof.ts             7-field IKOF input → IICSignature(hex) → IKOF=MD5 → JIKR placeholder
-  commitments.ts      Poseidon: itemsCommit, D=Poseidon(T), C=SPEC §7-C2, registry leaf
+  authority.ts        GENERATOR-ONLY synthetic mock authority key + M + σ_rcpt (C1)
+  commitments.ts      Poseidon: itemsCommit, C=SPEC §7-C2, leaf + Provable cores (circuit-shared)
   merkle.ts           registered-sellers tree: root + inclusion paths (o1js MerkleWitness)
-  synthetic.ts        deterministic record + registry generation (valid + 4 invalid kinds)
+  circuit.ts          the v0-A ZkProgram (C1–C4 + C5 limit) — the core deliverable
+  synthetic.ts        deterministic record + registry generation (valid + 5 invalid kinds)
   fixtures.ts         assembles {publicInputs, witness, expected, _invalidReason, ikof, efi}
   index.ts            CLI (npm run gen)
   synthetic/index.ts  compatibility re-export of the generator API
 scripts/check.ts      generator self-check (npm run check) — NOT the ZK circuit
+test/                 36 fast guards (runner.ts) + t-circuit.test.ts (ZkProgram suite)
 fixtures/             generated output (git-ignored; .gitkeep tracked)
 synthetic-keys/       synthetic RSA keypair + NON-PRODUCTION marker (git-ignored)
 ```
+
+---
+
+## The v0-A circuit (`src/circuit.ts` — ZkProgram)
+
+A Mina **ZkProgram** proving SPEC §7 over a synthetic receipt, revealing only the
+public statement. Scheme: **o1js native `Signature`** (Schnorr over Pallas,
+Poseidon-based — SPEC §11.1 left the v0-A scheme open, so we default to the
+ZK-native framework signature). The attestation authority is a **synthetic /
+NON-PRODUCTION mock** of the Montenegro Tax Administration (`src/authority.ts`),
+its key derived deterministically from the generator seed; the **secret key is
+never serialized**, only `PK_A` (public).
+
+- **Public inputs:** `PK_A`, `R_reg` (sellersRoot), `D_hi`, `D_lo`, `C`.
+  Statutory rate params are in-circuit constants (not public inputs).
+- **C1 — attestation binding.** Recompute `M = H(DS_attest, D_hi, D_lo, C, R_reg,
+  datetime, invoice_no)` from the public values + witness, assert it equals the
+  signed `M` (anti-replay), then `σ_rcpt.verify(PK_A, [M])`. One signature;
+  `R_reg` is anchored *inside* `M` (SPEC §11.3 one-signature branch — no σ_reg).
+- **C2 — commitment.** `commitCFields(witness) == C` (shared Provable core).
+- **C3 — VAT + range.** Round-half-up exactly as `computeVatCents`
+  (`vat·10000 + r == base·rateBp + 5000`, `0 ≤ r < 10000`); every monetary
+  witness range-checked to **MAXBITS=52**; `rateBp ∈ {0,700,2100}`;
+  `total == vat_base + vat_amount`.
+- **C4 — registration.** Poseidon-Merkle membership of `leaf = H(DS_leaf,
+  seller_tin)` under `R_reg`; `seller_tin` stays private.
+- **C5 — limit (documented, no code).** v0-A does **not** recompute
+  `D = SHA-256(canonical(P))` in-circuit — `D` is an **opaque public input**, so
+  C1 proves *"the authority signed THIS (D,C,R_reg,…)"*, not *"D is the SHA-256 of
+  these fields"*. The in-circuit digest is Phase-5 (SPEC §7-C5/§9).
+
+**Negative coverage.** Five invalid-fixture classes each make proving throw on
+their constraint: `VAT_MISMATCH`/`OUT_OF_RANGE` (C3), `SELLER_NOT_REGISTERED`
+(C4), `COMMITMENT_MISMATCH` (C2), `BAD_SIGNATURE` (C1) — plus a C1 anti-replay
+test (tampering a receipt field bound into `M`).
+
+> **Honest scope — `C` role (§6 / decision D2).** SPEC §6 labels `C` the
+> *published on-chain output*. v0-A realizes `C` as a **constrained public input**
+> (the circuit asserts `commitCFields(witness)==C`) so the COMMITMENT_MISMATCH
+> soundness case can be exercised. This is verifier-equivalent (C is part of the
+> verified public statement either way) but a deliberate **architectural role
+> change**; production / Phase-5 revisits whether `C` is a circuit output or input.
+> And, restating the core limit: the authority signature and digest here are
+> **synthetic/ZK-native**; real RSA-SHA256 + in-circuit SHA-256(`D`) are Phase-5.
 
 ---
 
@@ -155,9 +207,14 @@ string** so the self-check reads back the exact values hashed.
    reduced 4-field shorthand — so the generator matches the circuit the next task
    builds, and because SPEC §5.1 requires `seller_tin ∈ C`. See
    [`docs/o1js-notes.md`](docs/o1js-notes.md) and `src/commitments.ts`.
-6. **Receipt digest `D` = `Poseidon(T)`** (ZK-native), not `SHA-256(canonical
-   XML)`. Byte-exact Exclusive-C14N is **not** done in v0-A (Phase-5 abstraction,
-   SPEC §3/§13); the synthetic EFI XML is shape/realism only.
+6. **Receipt digest `D` = `SHA-256(canonical(P))`** (SPEC §7-C5/§13), two 128-bit
+   limbs `{hi,lo}`; an **opaque public input** (the circuit does not recompute it
+   — Phase-5). The byte `canonicalize(P)` is a synthetic v0-A convention, NOT the
+   real EFI-XML/Exclusive-C14N form (Phase-5 / Tehnička uputstva). The synthetic
+   EFI XML is shape/realism only.
+7. **Authority signature (C1)** = o1js native `Signature` (Schnorr/Pallas); the
+   authority key is a synthetic seed-derived mock; `C` is realized as a constrained
+   public input (decision D2, see the circuit section). Real RSA-SHA256 = Phase-5.
 
 ### Fixtures
 
@@ -202,9 +259,12 @@ next task's circuit tests positive + negative cases. Fixture shape:
 
 ## Status
 
-Repo skeleton + synthetic EFI generator complete; `npm run gen` and
-`npm run check` are green. **No circuit code yet** — the ZkProgram is the next
-task, to be implemented against `spec/SPEC.md` using the shared `src/` modules.
+v0-A complete: synthetic generator **+ the ZkProgram** (`src/circuit.ts`, C1–C4 +
+C5 limit) with authority attestation. `npm run gen`, `npm run check` (10/10), the
+**36 fast guards** (`npm test`), and the **ZkProgram suite** (`npm run
+test:circuit`: compile + 5 valid proofs verify + all 5 invalids reject + C1
+anti-replay) are all green. Phase-5 (real RSA-SHA256 + in-circuit SHA-256 `D` +
+real registry oracle + threshold audit) remains the R&D track (SPEC §8–§10).
 
 ---
 

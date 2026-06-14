@@ -21,7 +21,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPublicKey } from 'node:crypto';
-import { Field } from 'o1js';
+import { Field, PublicKey, Signature } from 'o1js';
 
 import {
   computeVatCents,
@@ -32,6 +32,7 @@ import {
 import { fieldFromJSON, isAmountInRange } from '../src/encoding.js';
 import { commitC, itemsCommit, sellerLeaf } from '../src/commitments.js';
 import { digestD } from '../src/canonical.js';
+import { computeAttestMessage } from '../src/authority.js';
 import { recomputeIndex, recomputeRoot } from '../src/merkle.js';
 import { buildIkofInput } from '../src/ikof.js';
 import { md5UpperHex, rsaSha256Verify } from '../src/rsa.js';
@@ -69,6 +70,8 @@ interface Predicates {
   digestOk: boolean;
   commitOk: boolean;
   ikofOk: boolean;
+  mOk: boolean; //   M == H(DS.ATTEST, D_hi, D_lo, C, R_reg, datetime, invoice_no)
+  sigOk: boolean; // Verify(PK_A, M, σ_rcpt)  (SPEC §7-C1)
 }
 
 function evaluate(fx: Fixture): Predicates {
@@ -129,6 +132,27 @@ function evaluate(fx: Fixture): Predicates {
     ikofOk = false;
   }
 
+  // (f) C1 authority attestation (SPEC §7-C1): recompute M from public+witness,
+  //     then verify σ_rcpt against (PK_A, M).
+  const M = fieldFromJSON(fx.witness.M);
+  const recomputedM = computeAttestMessage(
+    fieldFromJSON(D.hi),
+    fieldFromJSON(D.lo),
+    fieldFromJSON(fx.publicInputs.C),
+    fieldFromJSON(fx.publicInputs.sellersRoot),
+    rec.datetime,
+    rec.invoiceNo,
+  );
+  const mOk = recomputedM.toString() === M.toString();
+  let sigOk = false;
+  try {
+    const pkA = PublicKey.fromBase58(fx.publicInputs.PK_A);
+    const sigR = Signature.fromBase58(fx.witness.sigReceipt);
+    sigOk = sigR.verify(pkA, [M]).toBoolean();
+  } catch {
+    sigOk = false;
+  }
+
   return {
     vatOk,
     rangeOk,
@@ -138,6 +162,8 @@ function evaluate(fx: Fixture): Predicates {
     digestOk,
     commitOk,
     ikofOk,
+    mOk,
+    sigOk,
   };
 }
 
@@ -156,6 +182,8 @@ function checkValid(fx: Fixture, p: Predicates): Result {
   if (!p.itemsCommitOk) failures.push('itemsCommit mismatch');
   if (!p.digestOk) failures.push('D mismatch');
   if (!p.commitOk) failures.push('C (C2) mismatch');
+  if (!p.mOk) failures.push('M ≠ H(DS.ATTEST, D_hi, D_lo, C, R_reg, datetime, invoice_no) (C1)');
+  if (!p.sigOk) failures.push('authority signature (C1) failed to verify');
   if (!p.ikofOk) failures.push('IKOF chain failed to verify');
   return { id: fx.id, pass: failures.length === 0, failures };
 }
@@ -175,6 +203,9 @@ function checkInvalid(fx: Fixture, p: Predicates): Result {
       break;
     case 'COMMITMENT_MISMATCH':
       violationPresent = !p.commitOk;
+      break;
+    case 'BAD_SIGNATURE':
+      violationPresent = !p.sigOk; // σ_rcpt does not verify against (PK_A, M)
       break;
     default:
       return {

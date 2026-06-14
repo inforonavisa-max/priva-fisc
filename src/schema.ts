@@ -124,6 +124,7 @@ export const INVALID_REASONS = [
   'SELLER_NOT_REGISTERED', // violates SPEC §7-C4 Merkle membership
   'OUT_OF_RANGE', //          violates SPEC §7-C3 range bound (> MAX_AMOUNT_CENTS)
   'COMMITMENT_MISMATCH', //   violates SPEC §7-C2 (published C ≠ C(witness))
+  'BAD_SIGNATURE', //         violates SPEC §7-C1 (σ_rcpt fails Verify(PK_A, M))
 ] as const;
 export type InvalidReason = (typeof INVALID_REASONS)[number];
 
@@ -172,18 +173,16 @@ export interface PublicInputs {
   /** R_reg — registered-sellers Merkle root (SPEC §6 `R_reg`). */
   sellersRoot: string;
   /**
-   * PK_A reference — authority key. The v0-A authority ZK-signature
-   * (Schnorr/EdDSA-native, SPEC §3/§7-C1) and σ_rcpt/σ_reg attestations are
-   * produced by the CIRCUIT task, not this generator; this is a documented
-   * placeholder. (The *seller* RSA key for the IKOF chain is separate —
-   * see IkofChain.sellerRsaPublicKeyPem.)
+   * PK_A — attestation authority PUBLIC key (SPEC §6), base58. The synthetic
+   * mock tax-authority key (src/authority.ts); the secret key is never
+   * serialized. (The *seller* RSA key for the IKOF chain is separate — see
+   * IkofChain.sellerRsaPublicKeyPem.)
    */
-  PK_ref: {
-    scheme: 'zk-native-signature (deferred to circuit task)';
-    note: string;
-    value: null;
-  };
-  /** Statutory rate parameters (SPEC §7-C3). */
+  PK_A: string;
+  /**
+   * Statutory rate parameters (SPEC §7-C3). Informational here; the circuit
+   * embeds these as in-circuit constants (not a per-proof public input).
+   */
   rateParams: RateParams;
 }
 
@@ -208,6 +207,10 @@ export interface FixtureWitness {
   itemsCommit: string;
   /** Commitment randomness `salt` (SPEC §6, §7-C2), Field decimal string. */
   salt: string;
+  /** σ_rcpt — authority attestation over M (SPEC §6, §7-C1), base58 signature. */
+  sigReceipt: string;
+  /** M — binding message (SPEC §7-C1), Field decimal; for self-check + circuit. */
+  M: string;
   /** Merkle inclusion path: leaf→root siblings (SPEC §7-C4 `path_reg`). */
   merklePath: { sibling: string; isLeft: boolean }[];
   /** Leaf index bits, LSB-first (bit k = isLeft[k] ? 0 : 1; see o1js-notes). */
