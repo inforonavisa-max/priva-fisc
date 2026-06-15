@@ -1,0 +1,9 @@
+{
+  "program": "priva_fisc_v0a.aleo",
+  "version": "0.1.0",
+  "description": "PRIVA-FISC v0-A relation (SPEC C1-C5) in Leo. Synthetic data only.",
+  "license": "Apache-2.0",
+  "leo": "4.2.0",
+  "dependencies": null,
+  "dev_dependencies": null
+}

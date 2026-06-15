@@ -1,0 +1,10 @@
+.env
+*.avm
+*.prover
+*.verifier
+build/
+outputs/
+# never commit account keys (tests generate synthetic keys in-memory only)
+*.key
+.authority*
+*PrivateKey*
