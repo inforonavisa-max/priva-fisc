@@ -1,0 +1,28 @@
+Minascan capture — Mina Devnet — FiscAnchor zkApp DEPLOY transaction
+Source: https://minascan.io/devnet/tx/5Jtb4kX3ANjnqdaNsJVSShTb3dtiSe3KivscdaUK6Q5gU28mrpof?type=zk-tx
+Captured in a residential browser on 2026-06-15 (WebFetch/datacenter returns HTTP 403).
+
+Transaction Details
+  Transaction Type : zkApp Tx
+  Status           : Applied            <-- network accepted the transaction
+  Amount           : 0 MINA  (0 USD)
+  Transaction Hash : 5Jtb4kX3ANjnqdaNsJVSShTb3dtiSe3KivscdaUK6Q5gU28mrpof
+  Block            : 527,877
+  Confirmations    : 203 blocks after
+  Created          : 14.06.2026  18:30 UTC
+  Nonce            : 0
+  Block State Hash : 3NK8T28VfMsS9gBv3jfoUvLXrfXYBYmPUuVx1mQVuPw1yaFv4hi2
+
+Fee Payer : B62qnXRgk811FnEiYYhAuy27nhBT5oaqzgoHMeKu3QtRmgch3emw5Ze
+Fee       : 0.1 MINA
+
+Account Updates : 2
+  Update #1 : B62qnXRgk811FnEiYYhAuy27nhBT5oaqzgoHMeKu3QtRmgch3emw5Ze   (fee payer)
+  Update #2 : [zk] B62qjhevpDt7BNjvt37JLqr9DVzA7Ewdoye48SbxaaY7vt9QK6X69Q6   (the FiscAnchor zkApp account — created here)
+
+Balance Change
+  [zk] B62q…69Q6  :  Before 0 MINA  ->  After 0 MINA
+       B62q…w5Ze  :  Before 299 MINA -> After 297.9 MINA   (fee + zkApp account-creation)
+
+NOTE: addresses above are PUBLIC keys only. No private key / view key / seed appears here.
+This is synthetic v0-A devnet data — see ../mina-devnet-evidence.md for scope & honesty.

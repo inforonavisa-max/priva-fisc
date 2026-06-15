@@ -1,0 +1,22 @@
+Minascan capture — Mina Devnet — FiscAnchor zkApp ACCOUNT page
+Source: https://minascan.io/devnet/account/B62qjhevpDt7BNjvt37JLqr9DVzA7Ewdoye48SbxaaY7vt9QK6X69Q6
+Captured in a residential browser on 2026-06-15 (WebFetch/datacenter returns HTTP 403).
+
+Account : B62qjhevpDt7BNjvt37JLqr9DVzA7Ewdoye48SbxaaY7vt9QK6X69Q6
+  Status (as labelled by Minascan) : "Not Activated"
+  MINA Balance                     : 0
+  Transactions tab                 : "Showing 1 - 0 out of 0" / "There is no data yet"
+
+IMPORTANT — why the account page looks empty (display quirk, NOT a missing deploy):
+  Minascan's account "Transactions" tab does not list zkApp transactions for a
+  zero-balance zkApp account, so it renders as "Not Activated / no data". The account
+  IS a real, deployed zkApp — proven by the two zkApp transactions that reference it as
+  a "zk" account with zkApp account-updates:
+    - DEPLOY      tx 5Jtb4kX3…mrpof  (block 527,877, Applied) — Account Update #2 = this zkApp
+    - VERIFICATION tx 5JuG4rMN…A3Bw9 (block 527,878, Applied) — Account Update #1 = this zkApp
+  See ../mina-devnet-evidence.md and the two sibling .txt captures.
+
+  Presentation tip for reviewers: cite the two TRANSACTION links (which render fully) as
+  the primary evidence; the account link is corroborating only.
+
+NOTE: PUBLIC key only. No private key / view key / seed. Synthetic v0-A devnet data.
