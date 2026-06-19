@@ -2,6 +2,9 @@
 target/
 # Starknet Foundry cache
 .snfoundry_cache/
+# Python bytecode (from scripts/)
+__pycache__/
+*.pyc
 # never commit keys (recon uses synthetic test vectors only)
 *.key
 *PrivateKey*

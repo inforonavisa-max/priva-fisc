@@ -11,6 +11,9 @@
 //!
 //! Verified on: Scarb 2.18.0 / Cairo 2.18.0 / Sierra 1.8.0 / snforge 0.61.0 (macOS arm64).
 
+/// STRK20 × PRIVA-FISC VAT-on-ciphertext PoC (uses the real `she` library).
+pub mod poc;
+
 use core::circuit::{
     AddInputResultTrait, CircuitElement, CircuitInput, CircuitInputs, CircuitModulus,
     CircuitOutputsTrait, EvalCircuitTrait, circuit_mul, u384, u96,

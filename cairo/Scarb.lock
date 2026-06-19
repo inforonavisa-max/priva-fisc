@@ -5,8 +5,15 @@ version = 1
 name = "priva_fisc_recon"
 version = "0.1.0"
 dependencies = [
+ "she",
  "snforge_std",
 ]
+
+[[package]]
+name = "she"
+version = "0.4.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:1b81d4b6df2965050c5b563eb39227037910d20fe670dc01b5c87f6ca02fd7f7"
 
 [[package]]
 name = "snforge_scarb_plugin"
