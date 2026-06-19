@@ -1,0 +1,7 @@
+# Noir / Nargo build output
+target/
+*.gz
+# never commit keys (recon uses synthetic in-memory/test vectors only)
+*.key
+*PrivateKey*
+.env
