@@ -1,0 +1,8 @@
+# Scarb / Cairo build output
+target/
+# Starknet Foundry cache
+.snfoundry_cache/
+# never commit keys (recon uses synthetic test vectors only)
+*.key
+*PrivateKey*
+.env
