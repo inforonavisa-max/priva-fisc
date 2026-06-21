@@ -1,0 +1,26 @@
+# RECON SKELETON — NOT COMPILED LOCALLY (no Rust/cargo-stylus toolchain on this machine).
+# Illustrative only; pin exact versions against the current Stylus SDK before building.
+# See docs/arbitrum-recon.md §Task A (Stylus) and §Task E.
+[package]
+name = "fisc-compliance-gate-stylus"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+stylus-sdk = "0.9"        # Arbitrum Stylus Rust SDK (verify current version before use)
+alloy-primitives = "0.8"
+
+[features]
+export-abi = ["stylus-sdk/export-abi"]
+
+[lib]
+crate-type = ["lib", "cdylib"]   # cdylib -> wasm32-unknown-unknown for `cargo stylus`
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"           # optimize for small WASM (activation cost scales with size)
+lto = true
+panic = "abort"
+strip = true
