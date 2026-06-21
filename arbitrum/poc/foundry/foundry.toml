@@ -1,0 +1,15 @@
+# Foundry config for the PRIVA-FISC on-chain verification PoC test.
+# Self-contained: no forge-std git dependency (the test defines a minimal Vm interface).
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+cache_path = "cache"
+solc = "0.8.30"
+optimizer = true
+optimizer_runs = 200
+evm_version = "cancun"
+# FiscComplianceGate / IHonkVerifier reused from the recon skeleton; HonkVerifier from build/ (not duplicated).
+remappings = ["fisc/=../../solidity/src/", "verifier/=../artifacts/"]
+# Allow the test to read the real bb-generated proof + public inputs.
+fs_permissions = [{ access = "read", path = "../artifacts" }]

@@ -1,0 +1,7 @@
+# Transient build artifacts (regenerate via the steps in README.md).
+# The committed PoC evidence lives in artifacts/ (proof, vk, HonkVerifier.sol, calldata.json).
+circuit/target/
+helper/target/
+foundry/out/
+foundry/cache/
+foundry/broadcast/

@@ -1,0 +1,13 @@
+# RECON/PoC HELPER — off-circuit witness builder for the UNMODIFIED v0a_skeleton circuit.
+# It does NOT change the proven relation; it only recomputes the SAME Poseidon2/Grumpkin
+# values (commitment C, registry root, binding message M, public key P, nonce point R,
+# challenge e) so a valid Schnorr signature can be finished off-circuit (s = k - e*sk mod n).
+# Uses the exact same poseidon tag as the circuit. SYNTHETIC DATA ONLY.
+[package]
+name = "v0a_witness_helper"
+type = "bin"
+authors = [""]
+compiler_version = ">=1.0.0"
+
+[dependencies]
+poseidon = { tag = "v0.3.0", git = "https://github.com/noir-lang/poseidon" }
