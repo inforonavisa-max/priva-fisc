@@ -1,6 +1,6 @@
 # PRIVA-FISC — Circuit Specification
 
-> **Variant:** v0-A · **Status:** DRAFT (pending ZK-grant + honesty review)
+> **Variant:** v0-A · **Status:** DRAFT (pending honesty review)
 > **Scope:** language-agnostic. This document defines the *relation* the circuit
 > proves — public/private inputs, constraints, trust model — independent of any
 > proving framework. No o1js (or Leo/Noir) API appears here by design; the same
@@ -247,8 +247,7 @@ cost, heavier than ECDSA) **+ SHA-256 + MD5 + XML Exclusive-C14N normalization**
 is individually expensive in a ZK circuit; together they dwarf the v0-A relation
 (a handful of Poseidon hashes, one ZK-native signature, one Merkle path, integer range
 checks). v0-A is therefore the honest, buildable first rung; a concrete
-constraint-count / proving-time estimate for the RSA path is a Phase-5 deliverable and
-a strong grant artifact in its own right.
+constraint-count / proving-time estimate for the RSA path is a Phase-5 deliverable.
 
 ---
 

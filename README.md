@@ -1,9 +1,11 @@
 # PRIVA-FISC — PoC (Mina / o1js)
 
-**PRIVA-FISC** is a zero-knowledge protocol that proves a service transaction was
-correctly fiscalized — VAT computed correctly, receipt structurally valid, seller
-tax-ID registered — **without revealing the private commercial data behind it**
-(buyer identity, item-level detail, margins). This repository is the **v0-A
+**PRIVA-FISC** is a minimum-disclosure layer over state-signed fiscal data: a
+zero-knowledge protocol proving, in one proof, that the authority's attestation
+verifies, the seller is in the authority-anchored registry, and the VAT
+predicate holds — **without revealing the private commercial data behind it**
+(buyer identity, item-level detail, margins). Verifiers are private parties;
+the state is the data source, not the client. This repository is the **v0-A
 proof-of-concept** on the Mina protocol using **o1js** (TypeScript).
 
 📄 **Architecture write-up / whitepaper:** [WHITEPAPER.md](WHITEPAPER.md)
